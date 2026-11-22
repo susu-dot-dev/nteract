@@ -14,6 +14,22 @@ const host = process.env.PAGES_HOST || "localhost";
 if (!["localhost", "127.0.0.1"].includes(host))
   throw new Error("PAGES_HOST must be localhost or 127.0.0.1");
 const origin = `http://${host}:${port}`;
+// PAGES_AUTHSU_URL signs in with a local authsu (`make dev` in its repository,
+// http://localhost:8787) in place of the loopback issuer below. authsu fetches
+// Pages' client document at ${origin}/oauth/client.json, and sends the browser
+// back to ${origin}/oidc, so Pages must be on the port authsu's development
+// table allows for a localhost client.
+const authsuUrl = process.env.PAGES_AUTHSU_URL
+  ? new URL(process.env.PAGES_AUTHSU_URL).origin
+  : undefined;
+// A local authsu trusts exactly http://localhost:9894 as Pages. Any other
+// address would reach authsu as a client it doesn't know and fail at its
+// authorize endpoint with an error that doesn't say why.
+if (authsuUrl && new URL(authsuUrl).hostname === "localhost" && origin !== "http://localhost:9894")
+  throw new Error(
+    `A local authsu trusts only http://localhost:9894 as Pages, not ${origin}. ` +
+      "Unset PAGES_PORT and PAGES_HOST, or sign in with the local issuer.",
+  );
 // The build serves its view libraries from this origin. A frame host on
 // another origin admits them only over https, so module views that import a
 // library need a local frame host that admits this origin:
@@ -30,6 +46,16 @@ await writeFile(
   [
     `NOTEBOOK_CLOUD_APP_SESSION_SECRET=${secret}`,
     "NOTEBOOK_CLOUD_LOCAL_OIDC=true",
+    // Lets /oauth/authorize read an MCP client's metadata document, such as
+    // https://kilo.ai/docs/oauth/kilo/client.json. Deployed builds set this
+    // only because Cloudflare's global_fetch_strictly_public flag refuses
+    // private destinations; celld has no such boundary, so on this machine the
+    // setting is a statement that you only name hosts you trust. This file is
+    // local state and is never deployed (cloudflare-stage.mjs refuses
+    // LOCAL_OIDC vars). Set PAGES_OAUTH_METADATA_EGRESS=off to turn it off.
+    ...(process.env.PAGES_OAUTH_METADATA_EGRESS === "off"
+      ? []
+      : ["PAGES_OAUTH_METADATA_EGRESS=public-https"]),
     ...(process.env.PAGES_OUTPUT_FRAME_URL
       ? [`PAGES_OUTPUT_FRAME_URL=${new URL(process.env.PAGES_OUTPUT_FRAME_URL).href}`]
       : []),
@@ -41,11 +67,14 @@ await writeFile(
     "NOTEBOOK_CLOUD_OIDC_CLIENT_ID=pages-next-local",
     "NOTEBOOK_CLOUD_OIDC_AUDIENCE=pages-next-local",
     "NOTEBOOK_CLOUD_OIDC_PRINCIPAL_NAMESPACE=pages-next-local",
+    ...(authsuUrl ? [`PAGES_AUTHSU_URL=${authsuUrl}`] : []),
   ].join("\n") + "\n",
   { mode: 0o600 },
 );
 console.log(
-  `Pages: ${origin}. Local OIDC signs in as dev@localhost. State persists under dist/.celld.`,
+  authsuUrl
+    ? `Pages: ${origin}. Signs in with authsu at ${authsuUrl}. State persists under dist/.celld.`
+    : `Pages: ${origin}. Local OIDC signs in as dev@localhost. State persists under dist/.celld.`,
 );
 const child = spawn(
   "celld",

@@ -129,7 +129,11 @@ import {
 } from "./asset-uploads.mjs";
 import { sessionStoreReady } from "./isolate-setup.mjs";
 import { startingPage } from "./starting-page.mjs";
-import { handleKiloSignIn, kiloSessionProvider } from "./kilo-handoff.mjs";
+import {
+  browserSessionProvider,
+  handleProviderDocument,
+  handleProviderSignIn,
+} from "./custom-providers.mjs";
 import { signInCallbackOptions } from "./sign-in-failure.mjs";
 import { localOidcStore } from "./local-oidc-store.mjs";
 import { MISSING_EDITS_MESSAGE } from "../shared/receipts.mjs";
@@ -1710,7 +1714,11 @@ const gateway = {
         if ((error.status ?? 500) >= 500) logFailure(error, "gateway");
         return admissionErrorResponse(error, { stage: "gateway" });
       }
-      const oauth = await handleOAuth(request, env, ctx);
+      const providerDocument = handleProviderDocument(request, env);
+      if (providerDocument) return providerDocument;
+      const oauth = await handleOAuth(request, env, ctx, () =>
+        browserSessionProvider(env, request),
+      );
       if (oauth) return oauth;
       if (url.pathname === "/whoami") {
         if (request.method !== "GET") {
@@ -1724,8 +1732,8 @@ const gateway = {
           credential: { kind: identity.credentialKind, can_write: identity.canWrite },
         });
       }
-      const kilo = await handleKiloSignIn(request, env);
-      if (kilo) return kilo;
+      const providerSignIn = await handleProviderSignIn(request, env);
+      if (providerSignIn) return providerSignIn;
       if (url.pathname === "/api/auth/login" && request.method === "GET")
         return beginServerOidcLogin(request, env);
       if (url.pathname === "/oidc")
@@ -1754,7 +1762,7 @@ const gateway = {
         if (!request.headers.has("authorization")) {
           refreshed = await serverOidcSessionStatus(request, env, noop, {
             ...browserSessionOptions,
-            provider: kiloSessionProvider(env, request),
+            provider: browserSessionProvider(env, request),
             hold: (work) => holdUntilSettled(ctx, work),
           });
           // A renewal may have changed or ended the session; the expiry

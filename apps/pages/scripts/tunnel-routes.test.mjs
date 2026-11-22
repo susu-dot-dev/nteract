@@ -50,6 +50,8 @@ const GATEWAY = [
   // worker/oauth.mjs handleOAuth, by OAUTH_ROUTES.
   ...[...OAUTH_ROUTES].map((path) => ["oauth", "PUT", path]),
   ["whoami", "GET", "/whoami"],
+  // worker/authsu-signin.mjs authsuClientDocumentResponse: the document authsu fetches.
+  ["authsu client", "GET", "/oauth/client.json"],
   ["sign-in", "GET", "/api/auth/login"],
   ["sign-in", "GET", "/oidc"],
   ["sign-in", "POST", "/api/auth/logout"],

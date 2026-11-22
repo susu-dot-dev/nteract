@@ -9,8 +9,9 @@
  * it; none of them names a provider itself (test/identity-provider.test.mjs
  * holds them to that).
  *
- * Two providers exist. A deployment with `PAGES_KILO_APP_URL` set signs in
- * with Kilo accounts; every other deployment signs in with Anaconda.
+ * Three providers exist. A deployment with `PAGES_AUTHSU_URL` set signs in
+ * with authsu accounts, one with `PAGES_KILO_APP_URL` set signs in with Kilo
+ * accounts, and every other deployment signs in with Anaconda.
  * `identityProvider` picks between them from the deployment's settings.
  *
  * `apiKey` is null for a provider with no long-lived keys. Readers of the
@@ -128,8 +129,24 @@ const KILO = Object.freeze({
   verifiedEmail: false,
 });
 
+const AUTHSU = Object.freeze({
+  id: "authsu",
+  /** What people call the provider, in running text. */
+  label: "Susu",
+  /** Email domains an owner may open a Page to. authsu has none. */
+  companyDomains: reviewedDomains([]),
+  /** authsu doesn't report organizations to Pages yet. */
+  organizations: false,
+  /** authsu has no long-lived key Pages accepts yet: agents connect by OAuth. */
+  apiKey: null,
+  /** authsu reports an address but doesn't verify it, so no account carries
+   * one Pages can trust for an invitation. */
+  verifiedEmail: false,
+});
+
 /** The description of the provider this deployment signs in with. */
 export function identityProvider(env) {
+  if (env?.PAGES_AUTHSU_URL) return AUTHSU;
   if (env?.PAGES_KILO_APP_URL) return KILO;
   return anacondaProvider(env ?? {});
 }
