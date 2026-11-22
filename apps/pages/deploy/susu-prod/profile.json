@@ -2,9 +2,11 @@
   "name": "pages-prod",
   "account_id": "81eb4597e742b42f6342d1543d5cde1c",
   "workers_dev": false,
-  "custom_domain": { "hostname": "app.susu.dev", "zone_name": "susu.dev" },
   "d1": {
-    "auth": { "database_name": "pages-prod", "database_id": "0bd117ea-0f7a-4c73-a5f6-eed41a701082" },
+    "auth": {
+      "database_name": "pages-prod",
+      "database_id": "0bd117ea-0f7a-4c73-a5f6-eed41a701082"
+    },
     "usage": {
       "database_name": "pages-prod-usage",
       "database_id": "94c9e361-598a-46db-8b3f-92c89163709b"

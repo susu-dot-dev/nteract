@@ -4,6 +4,9 @@
 # compatibility_date match outputStructuralConfig() in
 # scripts/cloudflare-stage.mjs. `npm run build` must run first; it writes
 # dist/output/worker.js with the build id /health reports.
+#
+# No route: a deploy never touches DNS. Attach sususercontent.com to this
+# Worker once, as a custom domain in the dashboard or with Wrangler.
 name = "pages-prod-outputs"
 account_id = "81eb4597e742b42f6342d1543d5cde1c"
 main = "../../dist/output/worker.js"
@@ -11,4 +14,3 @@ no_bundle = true
 compatibility_date = "2026-11-15"
 workers_dev = false
 preview_urls = false
-routes = [{ pattern = "sususercontent.com", custom_domain = true }]

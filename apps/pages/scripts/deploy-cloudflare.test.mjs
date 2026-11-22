@@ -5,7 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { cloudflareConfig } from "./cloudflare-stage.mjs";
-import { bootstrapDigest, checkFrame } from "./deploy-cloudflare.mjs";
+import { bootstrapDigest, checkFrame, checkNoRoutes } from "./deploy-cloudflare.mjs";
+import { generateKeyring } from "./cloudflare-session-keys.mjs";
+import { parseKeyring } from "./deployment/session-keys.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const receipt = { output_frame_path: "/frame/v2/" };
@@ -42,15 +44,32 @@ test("the frame URL must be this build's path on another origin", () => {
   );
 });
 
-test("the susu-prod profile is a valid deployment and names a real frame", () => {
+test("a deployment that would attach a route or DNS record is refused", () => {
+  assert.throws(() => checkNoRoutes({ custom_domain: { hostname: "a.b.c" } }, ""), /custom_domain/);
+  assert.throws(
+    () => checkNoRoutes({}, 'routes = [{ pattern = "x.example", custom_domain = true }]'),
+    /routes/,
+  );
+  assert.throws(() => checkNoRoutes({}, "workers_dev = true"), /routes/);
+  checkNoRoutes({}, "# No route: attach by hand\nworkers_dev = false\n");
+});
+
+test("a generated keyring is valid and new each time", () => {
+  const a = parseKeyring(generateKeyring());
+  assert.equal(a.active, "k1");
+  assert.notEqual(a.keys.k1, parseKeyring(generateKeyring()).keys.k1);
+});
+
+test("the susu-prod deployment is valid, names a real frame and attaches no route", () => {
   const directory = path.join(here, "../deploy/susu-prod");
   const profile = JSON.parse(readFileSync(path.join(directory, "profile.json"), "utf8"));
-  const config = cloudflareConfig(profile);
-  assert.deepEqual(config.routes, [
-    { pattern: "app.susu.dev", zone_name: "susu.dev", custom_domain: true },
-  ]);
-  assert.equal(checkFrame(profile, receipt).origin, "https://sususercontent.com");
   const output = readFileSync(path.join(directory, "wrangler.output.toml"), "utf8");
-  assert.match(output, /routes = \[\{ pattern = "sususercontent\.com", custom_domain = true \}\]/);
+  checkNoRoutes(profile, output);
+  const config = cloudflareConfig(profile);
+  assert.equal(config.routes, undefined);
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.vars.NOTEBOOK_CLOUD_PUBLIC_ORIGIN, "https://app.susu.dev");
+  assert.equal(checkFrame(profile, receipt).origin, "https://sususercontent.com");
   assert.match(output, /no_bundle = true/);
+  assert.match(output, /^name = "pages-prod-outputs"$/m);
 });

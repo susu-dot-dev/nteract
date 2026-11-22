@@ -2202,6 +2202,56 @@ Use a new destination directory each time. The session keyring goes in with
 Worker with people on it also needs the memory, recovery and overload behaviour
 qualified on Workers; the limits in this release are sized for the celld hosts.
 
+### Continuous deployment from Cloudflare Workers Builds
+
+[scripts/deploy-cloudflare.mjs](scripts/deploy-cloudflare.mjs) deploys the output
+Worker and then the Pages Worker from a repository checkout, using a deployment
+directory such as [deploy/susu-prod](deploy/susu-prod): `profile.json` (the
+profile above, committed, with no secret in it) and `wrangler.output.toml`.
+It changes nothing a commit doesn't decide. It never creates a route or DNS
+record (it refuses a profile with `custom_domain` and a Wrangler file with
+`routes`), and it never reads or sets a secret.
+
+Connect the Pages Worker (`name` in the profile) to the repository in the
+dashboard (Workers & Pages, the Worker, Settings, Builds) with:
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `apps/pages` |
+| Build command | `npm run setup && npm run build` |
+| Deploy command | `node scripts/deploy-cloudflare.mjs deploy/susu-prod` |
+| Non-production branch deploy command | `node scripts/deploy-cloudflare.mjs deploy/susu-prod --dry-run` (or turn those builds off) |
+| Build variable | `NODE_VERSION=24` (Pages needs Node 22.13 or later) |
+| Build watch paths | `apps/pages`, `apps/notebook-cloud/src`, `packages`, `src/components/markdown`, `src/components/sharing`, `src/styles` |
+
+Wrangler is the pinned one from `node_modules`. The deploy step requires a clean
+checkout whose build receipt matches `HEAD` and the source on disk, so the build
+command must run on the same commit. The build token must be allowed to edit both
+Workers' scripts; the deploy command uploads `pages-prod-outputs` as well as the
+connected Worker.
+
+One-off setup, once per deployment and outside the deploy:
+
+1. **Resources.** Create the two D1 databases and the R2 bucket named in the
+   profile (`wrangler d1 create`, `wrangler r2 bucket create`).
+2. **First deploy.** Let the build run. The Pages Worker answers `500
+   server_misconfigured` until the keyring is set.
+3. **Domains.** Attach each Worker's domain, as a custom domain on the Worker
+   in the dashboard or with Wrangler, in the zone that holds it. The app's
+   origin must be the profile's `NOTEBOOK_CLOUD_PUBLIC_ORIGIN`.
+4. **Session keyring.** `node scripts/cloudflare-session-keys.mjs
+   deploy/susu-prod --file KEYRING.json --generate` writes a keyring, validates
+   it and sets it as the Worker secret. Keep the file in the team secret store:
+   Workers secrets are write-only. It refuses to replace a secret already set
+   unless `--replace` is given, because a new key signs everyone out.
+5. **Check.** `node scripts/deploy-cloudflare.mjs deploy/susu-prod --verify`
+   checks the live frame shell (`/health` build id and bootstrap hash) and the
+   app over their public origins.
+
+Later deploys are the build and deploy commands alone. A plain variable in the
+profile replaces what the dashboard holds on every deploy, so change variables
+in the profile, not the dashboard.
+
 ### Deployment-neutral release package
 
 The [Pages package release](../../.github/workflows/pages-package-release.yml)
