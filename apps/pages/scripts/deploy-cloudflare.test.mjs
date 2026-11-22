@@ -5,7 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { cloudflareConfig } from "./cloudflare-stage.mjs";
-import { bootstrapDigest, checkFrame, checkNoRoutes } from "./deploy-cloudflare.mjs";
+import {
+  bootstrapDigest,
+  checkFrame,
+  checkNoRoutes,
+  withoutCiWorkerBinding,
+} from "./deploy-cloudflare.mjs";
 import { generateKeyring } from "./cloudflare-session-keys.mjs";
 import { parseKeyring } from "./deployment/session-keys.mjs";
 
@@ -72,4 +77,10 @@ test("the susu-prod deployment is valid, names a real frame and attaches no rout
   assert.equal(checkFrame(profile, receipt).origin, "https://sususercontent.com");
   assert.match(output, /no_bundle = true/);
   assert.match(output, /^name = "pages-outputs"$/m);
+});
+
+test("the output Worker is not bound to the Worker the CI build is connected to", () => {
+  const env = { PATH: "/bin", WRANGLER_CI_OVERRIDE_NAME: "pages", WRANGLER_CI_MATCH_TAG: "abc" };
+  assert.deepEqual(withoutCiWorkerBinding(env), { PATH: "/bin" });
+  assert.equal(env.WRANGLER_CI_OVERRIDE_NAME, "pages");
 });

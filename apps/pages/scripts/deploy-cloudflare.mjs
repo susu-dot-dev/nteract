@@ -70,9 +70,19 @@ async function get(url) {
   return { status: response.status, text: await response.text() };
 }
 
-function run(args, options = {}) {
+/** `env` without the variables Cloudflare Workers Builds sets for the Worker
+ * it is connected to. Wrangler prefers WRANGLER_CI_OVERRIDE_NAME to a config's
+ * `name`, so the output Worker would deploy over the connected Worker, and
+ * WRANGLER_CI_MATCH_TAG makes it refuse any other Worker. The output Worker is
+ * a different Worker on purpose. */
+export function withoutCiWorkerBinding(env) {
+  const { WRANGLER_CI_OVERRIDE_NAME: _name, WRANGLER_CI_MATCH_TAG: _tag, ...rest } = env;
+  return rest;
+}
+
+function run(args, { env = process.env } = {}) {
   console.log(`$ wrangler ${args.join(" ")}`);
-  execFileSync(wrangler, args, { cwd: app, stdio: "inherit", ...options });
+  execFileSync(wrangler, args, { cwd: app, stdio: "inherit", env });
 }
 
 /** Retry until the new deployment answers: a custom domain's certificate and
@@ -116,18 +126,19 @@ export async function main(argv) {
   const frame = checkFrame(profile, receipt);
   const origin = profile.vars.NOTEBOOK_CLOUD_PUBLIC_ORIGIN;
 
+  const outputEnv = withoutCiWorkerBinding(process.env);
   const stage = path.join(mkdtempSync(path.join(os.tmpdir(), "pages-cloudflare-")), "release");
   const appConfig = prepareCloudflare(stage, profile);
   console.log(`Build ${receipt.build_id} staged at ${stage}`);
 
   if (dryRun) {
-    run(["deploy", "--config", outputConfig, "--dry-run"]);
+    run(["deploy", "--config", outputConfig, "--dry-run"], { env: outputEnv });
     run(["deploy", "--config", appConfig, "--dry-run"]);
     console.log("Dry run only; nothing was uploaded.");
     return;
   }
 
-  run(["deploy", "--config", outputConfig]);
+  run(["deploy", "--config", outputConfig], { env: outputEnv });
   run(["deploy", "--config", appConfig]);
   console.log(`Deployed build ${receipt.build_id}: ${profile.name} and the output Worker.`);
   if (!verify) return;

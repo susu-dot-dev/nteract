@@ -15,6 +15,7 @@
     "setup": "node setup.mjs",
     "build:upstream": "tsc -p upstream/packages/automerge-repo",
     "build": "node scripts/build.mjs",
+    "build:cloudflare": "npm run setup && npm run build",
     "dev": "node scripts/dev.mjs",
     "e2e": "node scripts/e2e.mjs",
     "test": "tsx --tsconfig tsconfig.json --test worker/*.test.mjs model/*.test.mjs viewer/*.test.mjs sync/*.test.mjs test/*.test.mjs scripts/*.test.mjs",

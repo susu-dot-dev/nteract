@@ -2218,7 +2218,7 @@ dashboard (Workers & Pages, the Worker, Settings, Builds) with:
 | Setting | Value |
 | --- | --- |
 | Root directory | `apps/pages` |
-| Build command | `npm run setup && npm run build` |
+| Build command | `npm run build:cloudflare` (installs with npm, then builds; the repository's pnpm lockfile makes Cloudflare default to `pnpm run build`, which has no `node_modules` and fails on a missing `esbuild`) |
 | Deploy command | `node scripts/deploy-cloudflare.mjs deploy/susu-prod` |
 | Non-production branch deploy command | `node scripts/deploy-cloudflare.mjs deploy/susu-prod --dry-run` (or turn those builds off) |
 | Build variable | `NODE_VERSION=24` (Pages needs Node 22.13 or later) |
