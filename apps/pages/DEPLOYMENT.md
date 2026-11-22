@@ -2227,7 +2227,7 @@ dashboard (Workers & Pages, the Worker, Settings, Builds) with:
 Wrangler is the pinned one from `node_modules`. The deploy step requires a clean
 checkout whose build receipt matches `HEAD` and the source on disk, so the build
 command must run on the same commit. The build token must be allowed to edit both
-Workers' scripts; the deploy command uploads `pages-prod-outputs` as well as the
+Workers' scripts; the deploy command uploads `pages-outputs` as well as the
 connected Worker.
 
 One-off setup, once per deployment and outside the deploy:

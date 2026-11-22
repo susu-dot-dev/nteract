@@ -7,7 +7,7 @@
 #
 # No route: a deploy never touches DNS. Attach sususercontent.com to this
 # Worker once, as a custom domain in the dashboard or with Wrangler.
-name = "pages-prod-outputs"
+name = "pages-outputs"
 account_id = "81eb4597e742b42f6342d1543d5cde1c"
 main = "../../dist/output/worker.js"
 no_bundle = true

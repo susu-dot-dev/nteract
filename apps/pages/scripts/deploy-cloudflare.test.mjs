@@ -71,5 +71,5 @@ test("the susu-prod deployment is valid, names a real frame and attaches no rout
   assert.equal(config.vars.NOTEBOOK_CLOUD_PUBLIC_ORIGIN, "https://app.susu.dev");
   assert.equal(checkFrame(profile, receipt).origin, "https://sususercontent.com");
   assert.match(output, /no_bundle = true/);
-  assert.match(output, /^name = "pages-prod-outputs"$/m);
+  assert.match(output, /^name = "pages-outputs"$/m);
 });
