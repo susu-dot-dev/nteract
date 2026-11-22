@@ -1,0 +1,14 @@
+# The output (user frame) Worker for the susu prod deployment. It is the same
+# module the release package ships as output/worker.js: no bindings, vars,
+# secrets or cookies, on its own registrable domain. main, no_bundle and
+# compatibility_date match outputStructuralConfig() in
+# scripts/cloudflare-stage.mjs. `npm run build` must run first; it writes
+# dist/output/worker.js with the build id /health reports.
+name = "pages-prod-outputs"
+account_id = "81eb4597e742b42f6342d1543d5cde1c"
+main = "../../dist/output/worker.js"
+no_bundle = true
+compatibility_date = "2026-11-15"
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "sususercontent.com", custom_domain = true }]
